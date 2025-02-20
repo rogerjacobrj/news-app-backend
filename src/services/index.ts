@@ -1,5 +1,6 @@
-import { GUARDIAN_URL, NEWYORK_TIMES_URL, NEWSAPI_URL } from '../constants';
 import axios from 'axios';
+import { GUARDIAN_URL, NEWYORK_TIMES_URL, NEWSAPI_URL } from '../constants';
+import { formatDataFromSources, formatGuadianSectionData } from '../helpers';
 
 interface ArticleQuery {
   source?: string;
@@ -60,7 +61,6 @@ export const getArticles = async (query: ArticleQuery) => {
 
   try {
     const url: string = `${endpoint}?${queryParams.join('&')}`;
-    console.log(url);
 
     const response = await axios.get(url);
 
@@ -74,11 +74,12 @@ export const getArticles = async (query: ArticleQuery) => {
       results = response?.data?.articles;
     }
 
-    // format the data for consistent keys & data
+    const formattedResults = formatDataFromSources(source, results);
+
     return {
       status: true,
-      sections,
-      articles: results,
+      sections: formatGuadianSectionData(sections),
+      articles: formattedResults,
     };
   } catch (error) {
     return {
