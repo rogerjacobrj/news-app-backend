@@ -108,7 +108,6 @@ export const getArticles = async (requestQuery: ArticleQuery) => {
 
     let results: any = [];
     let authors: any = [];
-    let categories: any = [];
 
     if (source === 'guardian') {
       results = response?.data?.response?.results;
@@ -121,24 +120,14 @@ export const getArticles = async (requestQuery: ArticleQuery) => {
     const formattedResults = formatDataFromSources(source, results);
     authors = getAuthors(source, formattedResults);
 
-    if (source === 'newyork_times') {
-      categories = getCategories(source, NEWYORK_TIMES_CATEGORIES);
-    } else if (source === 'guardian') {
-      const sections = await getSections();
-      // categories = formatGuadianSectionData(sections);
-    }
-
     return {
       status: true,
       authors,
       articles: formattedResults,
-      categories,
     };
   } catch (error) {
     return {
       status: false,
-      categories: [],
-      sections: [],
       articles: [],
       message: 'Failed to fetch articles',
     };
@@ -172,5 +161,7 @@ export const getCategoriesBySource = async (requestQuery: CategoryBySource) => {
     } catch (error) {
       return [];
     }
+  } else if (source === 'news_api') {
+    return [];
   }
 };
