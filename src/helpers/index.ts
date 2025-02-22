@@ -16,7 +16,7 @@ export const formatGuadianSectionData = (data: any) => {
 const formatGuardianSection = (data: any) => {
   return {
     id: data?.id,
-    title: data?.webTitle,
+    name: data?.webTitle,
   };
 };
 
@@ -137,10 +137,15 @@ export const getCategories = (source: string, data: any) => {
   const categories = [];
 
   for (let i = 0; i < data.length; i++) {
-    if (source === 'guardian' || source === 'newyork_times') {
+    if (source === 'guardian') {
       categories.push({
         id: data[i].category,
         name: data[i].category,
+      });
+    } else if (source === 'newyork_times') {
+      categories.push({
+        id: data[i],
+        name: data[i],
       });
     }
   }

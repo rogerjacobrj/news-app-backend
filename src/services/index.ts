@@ -1,5 +1,10 @@
 import axios from 'axios';
-import { GUARDIAN_URL, NEWYORK_TIMES_URL, NEWSAPI_URL } from '../constants';
+import {
+  GUARDIAN_URL,
+  NEWYORK_TIMES_URL,
+  NEWSAPI_URL,
+  NEWYORK_TIMES_CATEGORIES,
+} from '../constants';
 import {
   convertString,
   formatDataFromSources,
@@ -43,7 +48,7 @@ export const getArticles = async (requestQuery: ArticleQuery) => {
       queryParams.push(`page=${page}`);
       queryParams.push(`page-size=${size}`);
       sort && queryParams.push(`order-by=${sort}`);
-
+      category && queryParams.push(`section=${category}`);
       queryParams.push(`show-fields=headline,thumbnail,byline`);
       // queryParams.push(`show-tags=contributor`);
       query && queryParams.push(`q=${query}`);
@@ -54,9 +59,6 @@ export const getArticles = async (requestQuery: ArticleQuery) => {
       }
 
       queryParams.push(`api-key=${process.env.GUARDIAN_API_KEY!}`);
-
-      sections = await getSections();
-
       break;
     }
 
@@ -114,12 +116,17 @@ export const getArticles = async (requestQuery: ArticleQuery) => {
 
     const formattedResults = formatDataFromSources(source, results);
     authors = getAuthors(source, formattedResults);
-    categories = getCategories(source, formattedResults);
+
+    if (source === 'newyork_times') {
+      categories = getCategories(source, NEWYORK_TIMES_CATEGORIES);
+    } else if (source === 'guardian') {
+      const sections = await getSections();
+      categories = formatGuadianSectionData(sections);
+    }
 
     return {
       status: true,
       authors,
-      sections: formatGuadianSectionData(sections),
       articles: formattedResults,
       categories,
     };
