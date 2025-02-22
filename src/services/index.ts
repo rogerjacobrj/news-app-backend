@@ -1,17 +1,36 @@
 import axios from 'axios';
 import { GUARDIAN_URL, NEWYORK_TIMES_URL, NEWSAPI_URL } from '../constants';
-import { formatDataFromSources, formatGuadianSectionData } from '../helpers';
+import {
+  convertString,
+  formatDataFromSources,
+  formatGuadianSectionData,
+  getAuthors,
+  getCategories,
+} from '../helpers';
 
 interface ArticleQuery {
   source?: string;
-  keyword?: string;
+  query?: string;
   page?: number;
   size?: number;
+  sort?: string;
+  category?: string;
+  from_date?: string;
+  to_date?: string;
 }
 
 // Fetch all articles
-export const getArticles = async (query: ArticleQuery) => {
-  const { source = 'guardian', keyword, page = 1, size = 10 } = query;
+export const getArticles = async (requestQuery: ArticleQuery) => {
+  const {
+    source = 'guardian',
+    query,
+    page = 1,
+    size = 10,
+    sort,
+    category,
+    from_date,
+    to_date,
+  } = requestQuery;
 
   const queryParams = [];
   let endpoint: string = '';
@@ -23,11 +42,18 @@ export const getArticles = async (query: ArticleQuery) => {
 
       queryParams.push(`page=${page}`);
       queryParams.push(`page-size=${size}`);
+      sort && queryParams.push(`order-by=${sort}`);
+
       queryParams.push(`show-fields=headline,thumbnail,byline`);
       // queryParams.push(`show-tags=contributor`);
-      queryParams.push(`api-key=${process.env.GUARDIAN_API_KEY!}`);
+      query && queryParams.push(`q=${query}`);
 
-      keyword && queryParams.push(`q=${keyword}`);
+      if (from_date && to_date) {
+        queryParams.push(`from_date=${from_date}`);
+        queryParams.push(`to_date=${to_date}`);
+      }
+
+      queryParams.push(`api-key=${process.env.GUARDIAN_API_KEY!}`);
 
       sections = await getSections();
 
@@ -36,19 +62,29 @@ export const getArticles = async (query: ArticleQuery) => {
 
     case 'newyork_times': {
       endpoint = `${NEWYORK_TIMES_URL}`;
-
-      queryParams.push(`fq=section_name:("Technology")`);
+      category && queryParams.push(`fq=section_name:(${convertString(category)})`);
       queryParams.push(`page=${page}`);
-      queryParams.push(`size=${size}`);
-      queryParams.push(`api-key=${process.env.NEWYORK_TIMES_API_KEY!}`);
+      sort && queryParams.push(`sort=${sort}`);
+      query && queryParams.push(`q=${query}`);
 
+      if (from_date && to_date) {
+        queryParams.push(`begin_date=${from_date}`);
+        queryParams.push(`end_date=${to_date}`);
+      }
+      queryParams.push(`api-key=${process.env.NEWYORK_TIMES_API_KEY!}`);
       break;
     }
 
     case 'news_api': {
       endpoint = `${NEWSAPI_URL}/everything`;
-
-      queryParams.push(`q=${keyword ? keyword : 'anything'}`); // API requires some "keyword" to minimize results (mandatory field)
+      queryParams.push(`page=${page}`);
+      queryParams.push(`pageSize=${size}`);
+      sort && queryParams.push(`sortBy=${sort === 'newest' ? 'publishedAt' : 'relevancy'}`);
+      queryParams.push(`q=${query ? query : 'anything'}`); // API requires some "keyword" to minimize results (mandatory field)
+      if (from_date && to_date) {
+        queryParams.push(`from=${from_date}`);
+        queryParams.push(`to=${to_date}`);
+      }
       queryParams.push(`apiKey=${process.env.NEWSAPI_API_KEY!}`);
       break;
     }
@@ -65,6 +101,8 @@ export const getArticles = async (query: ArticleQuery) => {
     const response = await axios.get(url);
 
     let results: any = [];
+    let authors: any = [];
+    let categories: any = [];
 
     if (source === 'guardian') {
       results = response?.data?.response?.results;
@@ -75,15 +113,20 @@ export const getArticles = async (query: ArticleQuery) => {
     }
 
     const formattedResults = formatDataFromSources(source, results);
+    authors = getAuthors(source, formattedResults);
+    categories = getCategories(source, formattedResults);
 
     return {
       status: true,
+      authors,
       sections: formatGuadianSectionData(sections),
       articles: formattedResults,
+      categories,
     };
   } catch (error) {
     return {
       status: false,
+      categories: [],
       sections: [],
       articles: [],
       message: 'Failed to fetch articles',
