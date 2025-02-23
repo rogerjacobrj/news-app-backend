@@ -8,9 +8,9 @@ import {
 import {
   convertString,
   formatDataFromSources,
-  formatGuadianSectionData,
   getAuthors,
   getCategories,
+  transformCategoryData,
 } from '../helpers';
 
 interface ArticleQuery {
@@ -22,6 +22,10 @@ interface ArticleQuery {
   category?: string;
   from_date?: string;
   to_date?: string;
+}
+
+interface CategoryBySource {
+  source?: string;
 }
 
 // Fetch all articles
@@ -104,7 +108,6 @@ export const getArticles = async (requestQuery: ArticleQuery) => {
 
     let results: any = [];
     let authors: any = [];
-    let categories: any = [];
 
     if (source === 'guardian') {
       results = response?.data?.response?.results;
@@ -117,24 +120,14 @@ export const getArticles = async (requestQuery: ArticleQuery) => {
     const formattedResults = formatDataFromSources(source, results);
     authors = getAuthors(source, formattedResults);
 
-    if (source === 'newyork_times') {
-      categories = getCategories(source, NEWYORK_TIMES_CATEGORIES);
-    } else if (source === 'guardian') {
-      const sections = await getSections();
-      categories = formatGuadianSectionData(sections);
-    }
-
     return {
       status: true,
       authors,
       articles: formattedResults,
-      categories,
     };
   } catch (error) {
     return {
       status: false,
-      categories: [],
-      sections: [],
       articles: [],
       message: 'Failed to fetch articles',
     };
@@ -148,6 +141,27 @@ export const getSections = async () => {
     );
     return response?.data?.response?.results;
   } catch (error) {
+    return [];
+  }
+};
+
+export const getCategoriesBySource = async (requestQuery: CategoryBySource) => {
+  const { source = 'guardian' } = requestQuery;
+
+  if (source === 'newyork_times') {
+    return transformCategoryData(source, NEWYORK_TIMES_CATEGORIES);
+  } else if (source === 'guardian') {
+    try {
+      const url: string = `${GUARDIAN_URL}/sections?api-key=${process.env.GUARDIAN_API_KEY!}`;
+
+      const response: any = await axios.get(url);
+      const categories = transformCategoryData(source, response?.data?.response?.results);
+
+      return categories;
+    } catch (error) {
+      return [];
+    }
+  } else if (source === 'news_api') {
     return [];
   }
 };

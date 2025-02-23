@@ -1,22 +1,22 @@
 import { NEWYORK_TIMES_MEDIA_URL } from '../constants';
 
 // Format 'Guardian' section data
-export const formatGuadianSectionData = (data: any) => {
+export const transformCategoryData = (source: string, data: any) => {
   const formattedResults = [];
 
   for (let i = 0; i < data.length; i++) {
-    const item = formatGuardianSection(data[i]);
+    const item = formatCategory(source, data[i]);
     formattedResults.push(item);
   }
 
   return formattedResults;
 };
 
-// Format 'Guardian' section item
-const formatGuardianSection = (data: any) => {
+// Format categories data
+const formatCategory = (source: string, data: any) => {
   return {
-    id: data?.id,
-    name: data?.webTitle,
+    id: source === 'guardian' ? data?.id : data,
+    name: source === 'guardian' ? data?.webTitle : data,
   };
 };
 
